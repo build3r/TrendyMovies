@@ -1,6 +1,7 @@
 package builder.trendymovies.Adapters;
 
 import android.content.Intent;
+import android.os.Parcelable;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -10,9 +11,10 @@ import android.widget.TextView;
 
 import com.squareup.picasso.Picasso;
 
+import java.io.File;
 import java.util.List;
 
-import builder.trendymovies.Models.Result;
+import builder.trendymovies.Models.Movies;
 import builder.trendymovies.MoviesDetialActivity;
 import builder.trendymovies.R;
 import builder.trendymovies.Utils.BuilderLogger;
@@ -26,13 +28,13 @@ import butterknife.ButterKnife;
  */
 public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewHolder> implements View.OnClickListener
 {
-    List<Result> movieList;
+    List<Movies.Result> movieList;
     BuilderLogger mLog = new BuilderLogger(MoviesAdapter.class.getSimpleName());
-    public MoviesAdapter(List<Result>  movieList)
+    public MoviesAdapter(List<Movies.Result>  movieList)
     {
         this.movieList = movieList;
     }
-    public void changeDataSet(List<Result>  movieList)
+    public void changeDataSet(List<Movies.Result>  movieList)
     {
         this.movieList = movieList;
     }
@@ -48,11 +50,26 @@ int i=0;
     @Override
     public void onBindViewHolder(MovieViewHolder holder, int position)
     {
-        Result movie = movieList.get(position);
+        Movies.Result movie = movieList.get(position);
         holder.movieName.setText(movie.getTitle());
         //mLog.d("Poster Query = "+ Constants.POSTER_BASE+movie.getPosterPath());
         if(movie.getPosterPath()!=null)
-        Picasso.with(MyApplication.context).load(Constants.POSTER_BASE+movie.getPosterPath()).into(holder.moviePoster);
+        {
+            String URI;
+            if(movie.getPosterPath().contains("poster"))
+            {
+
+                Picasso.with(MyApplication.context).load(new File(movie.getPosterPath())).into(holder.moviePoster);
+                //URI = "file:"+movie.getPosterPath();
+            }
+            else
+            {
+                URI = Constants.POSTER_BASE + movie.getPosterPath();
+
+                mLog.d("POSTER = "+URI);
+                Picasso.with(MyApplication.context).load(URI).into(holder.moviePoster);
+            }
+        }
     }
 
 
@@ -78,7 +95,7 @@ int i=0;
     {
         int itemPosition = ((RecyclerView)v.getParent()).getChildLayoutPosition(v);
         Intent mIntent = new Intent(v.getContext(), MoviesDetialActivity.class);
-        mIntent.putExtra("DETAILS",movieList.get(itemPosition));
+        mIntent.putExtra("DETAILS",(Parcelable)movieList.get(itemPosition));
         v.getContext().startActivity(mIntent);
         //Toast.makeText(v.getContext(), "clicked "+itemPosition, Toast.LENGTH_SHORT).show();
     }

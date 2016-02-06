@@ -1,7 +1,7 @@
 package builder.trendymovies;
 
-import android.content.Context;
-import android.net.ConnectivityManager;
+import android.app.AlertDialog;
+import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
@@ -9,21 +9,30 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.GridLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.Toolbar;
+import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.RadioButton;
+import android.widget.RadioGroup;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.Gson;
 import com.squareup.okhttp.OkHttpClient;
 import com.squareup.okhttp.logging.HttpLoggingInterceptor;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 import builder.trendymovies.Adapters.MoviesAdapter;
 import builder.trendymovies.Interfaces.MoviesInterface;
 import builder.trendymovies.Models.Movies;
 import builder.trendymovies.Utils.BuilderLogger;
 import builder.trendymovies.Utils.Constants;
+import builder.trendymovies.Utils.Helper;
 import butterknife.Bind;
 import butterknife.ButterKnife;
 import icepick.Icepick;
@@ -37,15 +46,16 @@ import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
-public class MoviesActivity extends AppCompatActivity
+public class MoviesActivity extends AppCompatActivity implements RadioGroup.OnCheckedChangeListener
 {
     @Bind(R.id.movies_grid) RecyclerView moviesGrid;
     @Bind(R.id.fab) FloatingActionButton fab;
     @Bind(R.id.toolbar) Toolbar toolbar;
     @Bind(R.id.loading_layout) RelativeLayout loadingLayout;
-    String SORT_POPULAR = "popularity.desc";
+    final String SORT_POPULAR = "popularity.desc";
     //vote_average doesn't seems to be a good metric, movies with 1 vote of 10 are list on the top :-|
-    String SORT_VOTE = "vote_count.desc";
+    final String SORT_VOTE = "vote_count.desc";
+    final String SORT_FAVORITE = "FAVORITE";
     @State String CURRENT_SORT = "popularity.desc";
     RecyclerView.LayoutManager mLayoutManager;
     BuilderLogger mLog = new BuilderLogger(MoviesActivity.class.getSimpleName());
@@ -54,6 +64,7 @@ public class MoviesActivity extends AppCompatActivity
     MoviesInterface apiService;
     MoviesAdapter mAdapter;
     private Subscription subscription;
+    AlertDialog alert;
     @Override
     protected void onCreate(Bundle savedInstanceState)
     {
@@ -67,9 +78,10 @@ public class MoviesActivity extends AppCompatActivity
         mLayoutManager = new GridLayoutManager(this, 2);
         moviesGrid.setLayoutManager(mLayoutManager);
         initializeRetrofit();
-        if(isNetworkConnected())
+        if(Helper.isNetworkConnected())
         {
             populateMovies(CURRENT_SORT);
+
         }
         else
         {
@@ -80,7 +92,36 @@ public class MoviesActivity extends AppCompatActivity
             @Override
             public void onClick(View view)
             {
-                if(isNetworkConnected())
+                final AlertDialog.Builder alertBuilder = new AlertDialog.Builder(MoviesActivity.this);
+                LayoutInflater inflater = getLayoutInflater();
+                View mView = inflater.inflate(R.layout.movie_selction, null);
+                alertBuilder.setView(mView);
+
+                // Set an EditText view to get user input
+
+                alert = alertBuilder.create();
+
+                RadioGroup rg = (RadioGroup) mView.findViewById(R.id.radio_group);
+                switch (CURRENT_SORT)
+                {
+                    case SORT_VOTE:
+                        ((RadioButton) mView.findViewById(R.id.vote_count)).setChecked(true);
+                        break;
+
+                    case SORT_POPULAR:
+
+                        ((RadioButton) mView.findViewById(R.id.popularity)).setChecked(true);
+                        break;
+                    case SORT_FAVORITE:
+
+                        ((RadioButton) mView.findViewById(R.id.sort_favorites)).setChecked(true);
+                        break;
+                }
+                rg.setOnCheckedChangeListener(MoviesActivity.this);
+                alert.show();
+
+
+               /* if(Helper.isNetworkConnected())
                 {
                     moviesGrid.setVisibility(View.GONE);
                     loadingLayout.setVisibility(View.VISIBLE);
@@ -102,7 +143,7 @@ public class MoviesActivity extends AppCompatActivity
                 else
                 {
                     Snackbar.make(fab, "Internet Connection Unavailable", Snackbar.LENGTH_LONG).show();
-                }
+                }*/
 
             }
         });
@@ -187,41 +228,9 @@ public class MoviesActivity extends AppCompatActivity
                 loadingLayout.setVisibility(View.GONE);
             }
         });
-        /*.enqueue(new Callback<Movies>() {
-            @Override
-            public void onResponse(Response<Movies> response, Retrofit retrofit) {
 
-                int statusCode = response.code();
-                mLog.d("StatusCode = "+statusCode);
-                if(mAdapter==null)
-                {
-                    mAdapter = new MoviesAdapter(response.body().getResults());
-                    moviesGrid.setAdapter(mAdapter);
-                }
-                else
-                {
-                    mAdapter.changeDataSet(response.body().getResults());
-                    mAdapter.notifyDataSetChanged();
-                    //Reset the scroll to first item
-                    moviesGrid.scrollToPosition(0);
-                }
-                moviesGrid.setVisibility(View.VISIBLE);
-                loadingLayout.setVisibility(View.GONE);
-            }
-
-            @Override
-            public void onFailure(Throwable t) {
-                // Log error here since request failed
-                mLog.e("Failed to Retrieve the List");
-                t.printStackTrace();
-            }
-        });*/
     }
-    private boolean isNetworkConnected() {
-        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
 
-        return cm.getActiveNetworkInfo() != null;
-    }
     @Override public void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
         Icepick.saveInstanceState(this, outState);
@@ -229,6 +238,7 @@ public class MoviesActivity extends AppCompatActivity
     @Override
     protected void onDestroy()
     {
+        if(this.subscription!=null)
         this.subscription.unsubscribe();
         super.onDestroy();
     }
@@ -248,12 +258,72 @@ public class MoviesActivity extends AppCompatActivity
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings)
-        {
-            return true;
-        }
 
         return super.onOptionsItemSelected(item);
+    }
+
+
+    /**
+     * <p>Called when the checked radio button has changed. When the
+     * selection is cleared, checkedId is -1.</p>
+     *
+     * @param group     the group in which the checked radio button has changed
+     * @param checkedId the unique identifier of the newly checked radio button
+     */
+    @Override
+    public void onCheckedChanged(RadioGroup group, int checkedId)
+    {
+        switch (checkedId)
+        {
+            case R.id.vote_count:
+                CURRENT_SORT = SORT_VOTE;
+                populateMovies(CURRENT_SORT);
+            break;
+
+            case R.id.popularity:
+                CURRENT_SORT = SORT_POPULAR;
+                populateMovies(CURRENT_SORT);
+            break;
+            case R.id.sort_favorites:
+                populateFavMovies();
+                CURRENT_SORT = SORT_FAVORITE;
+            break;
+        }
+        alert.dismiss();
+    }
+
+    private void populateFavMovies()
+    {
+        SharedPreferences  mPreferences = getSharedPreferences(Constants.OFFLINE_PREF_KEY,MODE_PRIVATE);
+        Map<String, ?> prefsMap = mPreferences.getAll();
+        int i=1;
+        List<Movies.Result> moviesList = new ArrayList<>();
+        Gson gson = new Gson();
+        for (Map.Entry<String, ?> entry: prefsMap.entrySet())
+        {
+            mLog.d((i++)+" : "+ entry.getKey() + ":" + entry.getValue().toString());
+            moviesList.add(gson.fromJson(entry.getValue().toString(),Movies.Result.class));
+        }
+        mLog.d(moviesList.toString());
+        if(moviesList.size()>0)
+        {
+            if (mAdapter == null)
+            {
+                mAdapter = new MoviesAdapter(moviesList);
+                moviesGrid.setAdapter(mAdapter);
+            } else
+            {
+                mAdapter.changeDataSet(moviesList);
+                mAdapter.notifyDataSetChanged();
+                //Reset the scroll to first item
+                moviesGrid.scrollToPosition(0);
+            }
+            moviesGrid.setVisibility(View.VISIBLE);
+            loadingLayout.setVisibility(View.GONE);
+        }
+        else
+        {
+            Toast.makeText(this,"No favorites yet",Toast.LENGTH_LONG).show();
+        }
     }
 }
