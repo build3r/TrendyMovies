@@ -1,7 +1,9 @@
 package builder.trendymovies.Adapters;
 
 import android.content.Intent;
+import android.os.Bundle;
 import android.os.Parcelable;
+import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.RecyclerView;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -15,7 +17,8 @@ import java.io.File;
 import java.util.List;
 
 import builder.trendymovies.Models.Movies;
-import builder.trendymovies.MoviesDetialActivity;
+import builder.trendymovies.MovieDetailActivity;
+import builder.trendymovies.MovieDetailFragment;
 import builder.trendymovies.R;
 import builder.trendymovies.Utils.BuilderLogger;
 import builder.trendymovies.Utils.Constants;
@@ -30,9 +33,13 @@ public class MoviesAdapter extends RecyclerView.Adapter<MoviesAdapter.MovieViewH
 {
     List<Movies.Result> movieList;
     BuilderLogger mLog = new BuilderLogger(MoviesAdapter.class.getSimpleName());
-    public MoviesAdapter(List<Movies.Result>  movieList)
+    boolean mTwoPane = false;
+    AppCompatActivity mActivityCompat;
+    public MoviesAdapter(List<Movies.Result>  movieList, boolean twopane, AppCompatActivity mActivityCompat)
     {
+        this.mActivityCompat = mActivityCompat;
         this.movieList = movieList;
+        mTwoPane = twopane;
     }
     public void changeDataSet(List<Movies.Result>  movieList)
     {
@@ -94,9 +101,21 @@ int i=0;
     public void onClick(View v)
     {
         int itemPosition = ((RecyclerView)v.getParent()).getChildLayoutPosition(v);
-        Intent mIntent = new Intent(v.getContext(), MoviesDetialActivity.class);
-        mIntent.putExtra("DETAILS",(Parcelable)movieList.get(itemPosition));
-        v.getContext().startActivity(mIntent);
+        if (mTwoPane)
+        {
+            Bundle arguments = new Bundle();
+            arguments.putParcelable("DETAILS",(Parcelable)movieList.get(itemPosition));
+            MovieDetailFragment fragment = new MovieDetailFragment();
+            fragment.setArguments(arguments);
+            mActivityCompat.getSupportFragmentManager().beginTransaction().replace(R.id.mymovie_detail_container, fragment).commit();
+        } else
+        {
+
+
+            Intent mIntent = new Intent(v.getContext(), MovieDetailActivity.class);
+            mIntent.putExtra("DETAILS",(Parcelable)movieList.get(itemPosition));
+            v.getContext().startActivity(mIntent);
+        }
         //Toast.makeText(v.getContext(), "clicked "+itemPosition, Toast.LENGTH_SHORT).show();
     }
 

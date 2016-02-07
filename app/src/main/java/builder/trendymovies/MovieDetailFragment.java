@@ -8,13 +8,13 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
-import android.support.v7.app.AppCompatActivity;
+import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.Gravity;
 import android.view.LayoutInflater;
-import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.RelativeLayout;
@@ -52,25 +52,29 @@ import rx.Subscription;
 import rx.android.schedulers.AndroidSchedulers;
 import rx.schedulers.Schedulers;
 
-public class MoviesDetialActivity extends AppCompatActivity implements View.OnClickListener
+/**
+ * A fragment representing a single MyMovie detail screen.
+ * This fragment is either contained in a {@link MovieListActivity}
+ * in two-pane mode (on tablets) or a {@link MovieDetailActivity}
+ * on handsets.
+ */
+public class MovieDetailFragment extends Fragment  implements View.OnClickListener
 {
-    /*
-    original title
-    movie poster image thumbnail
-    A plot synopsis (called overview in the api)
-    user rating (called vote_average in the api)
-    release date
-    */
-    @Bind(R.id.movie_name) TextView movieName;
+    @Bind(R.id.movie_name)
+    TextView movieName;
     @Bind(R.id.release_date) TextView releaseDate;
     @Bind(R.id.user_rating) TextView userRating;
     @Bind(R.id.plot) TextView plot;
-    @Bind(R.id.movie_poster) ImageView moviePoster;
-    @Bind(R.id.backdrop) RelativeLayout backDrop;
-    @Bind(R.id.trailer_container) LinearLayout trailerContaier;
+    @Bind(R.id.movie_poster)
+    ImageView moviePoster;
+    @Bind(R.id.backdrop)
+    RelativeLayout backDrop;
+    @Bind(R.id.trailer_container)
+    LinearLayout trailerContaier;
     @Bind(R.id.review_container) LinearLayout reviewContaier;
-    @State Movies.Result movieDetails;
-    BuilderLogger mLog = new BuilderLogger(MoviesActivity.class.getSimpleName());
+    @State
+    Movies.Result movieDetails;
+    BuilderLogger mLog = new BuilderLogger(MovieDetailFragment.class.getSimpleName());
     Retrofit retrofit;
     ReviewsInterface reviewService;
     TrailersInterface trailerService;
@@ -93,16 +97,24 @@ public class MoviesDetialActivity extends AppCompatActivity implements View.OnCl
             Log.d("TAG", "Prepare Load");
         }
     };
+    public MovieDetailFragment()
+    {
+    }
+
     @Override
-    protected void onCreate(Bundle savedInstanceState)
+    public void onCreate(Bundle savedInstanceState)
     {
         super.onCreate(savedInstanceState);
-        Icepick.restoreInstanceState(this, savedInstanceState);
-        setContentView(R.layout.activity_movies_detial);
-        ButterKnife.bind(this);
-        movieDetails = this.getIntent().getParcelableExtra("DETAILS");
-        isFavorite = this.getIntent().getBooleanExtra("FAVORITE",false);
-        getSupportActionBar().setTitle(movieDetails.getTitle());
+
+
+    }
+
+    @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState)
+    {
+        View rootView = inflater.inflate(R.layout.mymovie_detail, container, false);
+        ButterKnife.bind(this,rootView);
+        movieDetails = this.getArguments().getParcelable("DETAILS");
         movieName.setText(movieDetails.getTitle());
         releaseDate.setText(movieDetails.getReleaseDate());
         userRating.setText(movieDetails.getVoteAverage()+"");
@@ -114,29 +126,29 @@ public class MoviesDetialActivity extends AppCompatActivity implements View.OnCl
             uri = Uri.fromFile(new File(movieDetails.getPosterPath())).toString();
             mLog.d("Loading Poster  locally "+uri);
 
-            Picasso.with(this).load(new File(movieDetails.getPosterPath())).into(moviePoster);
+            Picasso.with(MyApplication.context).load(new File(movieDetails.getPosterPath())).into(moviePoster);
         }
         else
         {
             uri = Constants.POSTER_BASE+movieDetails.getPosterPath();
             mLog.d("Loading Poster from  "+uri);
 
-            Picasso.with(this).load(uri).into(moviePoster);
+            Picasso.with(MyApplication.context).load(uri).into(moviePoster);
         }
         if(movieDetails.getBackdropPath().contains("back_drop"))
         {
             uri = Uri.fromFile(new File(movieDetails.getBackdropPath())).toString();
-           // uri = "file:"+movieDetails.getPosterPath();
+            // uri = "file:"+movieDetails.getPosterPath();
             mLog.d("Loading Back Drop locally "+uri);
 
-            Picasso.with(this).load(new File(movieDetails.getBackdropPath())).into(backDropTarget);
+            Picasso.with(MyApplication.context).load(new File(movieDetails.getBackdropPath())).into(backDropTarget);
         }
         else
         {
             uri = Constants.POSTER_BASE+movieDetails.getBackdropPath();
             mLog.d("Loading Poster from  "+uri);
 
-            Picasso.with(this).load(uri).into(backDropTarget);
+            Picasso.with(MyApplication.context).load(uri).into(backDropTarget);
         }
 
         if(Helper.isNetworkConnected())
@@ -156,7 +168,7 @@ public class MoviesDetialActivity extends AppCompatActivity implements View.OnCl
                 {
                     View v = LayoutInflater.from(trailerContaier.getContext()).inflate(R.layout.trailer_layout, trailerContaier, false);
                     v.setTag(trailersList.get(i).getKey());
-                    v.setOnClickListener(MoviesDetialActivity.this);
+                    v.setOnClickListener(MovieDetailFragment.this);
                     ((TextView)v.findViewById(R.id.trailer)).setText("Trailer "+(i+1));
                     trailerContaier.addView(v);
 
@@ -180,6 +192,7 @@ public class MoviesDetialActivity extends AppCompatActivity implements View.OnCl
 
         }
 
+        return rootView;
     }
 
     private void populateReviews(Integer id)
@@ -200,7 +213,7 @@ public class MoviesDetialActivity extends AppCompatActivity implements View.OnCl
             public void onError(Throwable e)
             {
                 mLog.d("There was a error");
-                TextView mTextView = new TextView(MoviesDetialActivity.this);
+                TextView mTextView = new TextView(MyApplication.context);
                 mTextView.setGravity(Gravity.CENTER);
                 mTextView.setText("Error Loading Reviews");
                 reviewContaier.addView(mTextView);
@@ -244,7 +257,7 @@ public class MoviesDetialActivity extends AppCompatActivity implements View.OnCl
             public void onError(Throwable e)
             {
                 mLog.d("There was a error");
-                TextView mTextView = new TextView(MoviesDetialActivity.this);
+                TextView mTextView = new TextView(MyApplication.context);
                 mTextView.setGravity(Gravity.CENTER);
                 mTextView.setText("Error Loading Trailers");
                 trailerContaier.addView(mTextView);
@@ -262,7 +275,7 @@ public class MoviesDetialActivity extends AppCompatActivity implements View.OnCl
                 {
                     View v = LayoutInflater.from(trailerContaier.getContext()).inflate(R.layout.trailer_layout, trailerContaier, false);
                     v.setTag(trailersList.get(i).getKey());
-                    v.setOnClickListener(MoviesDetialActivity.this);
+                    v.setOnClickListener(MovieDetailFragment.this);
                     ((TextView)v.findViewById(R.id.trailer)).setText("Trailer "+(i+1));
                     trailerContaier.addView(v);
 
@@ -277,7 +290,7 @@ public class MoviesDetialActivity extends AppCompatActivity implements View.OnCl
         /*HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
         interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);*/
         OkHttpClient client = new OkHttpClient();
-      //  client.interceptors().add(interceptor);
+        //  client.interceptors().add(interceptor);
         retrofit = new Retrofit.Builder()
                 .baseUrl(Constants.API_BASE)
                 .client(client)
@@ -310,15 +323,7 @@ public class MoviesDetialActivity extends AppCompatActivity implements View.OnCl
         }
 
     }
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu)
-    {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_movie_detail, menu);
-        if(isFavorite)
-            menu.getItem(0).setIcon(getResources().getDrawable(android.R.drawable.btn_star_big_on));
-        return true;
-    }
+
 
     int i=0;
     @Override
@@ -333,7 +338,7 @@ public class MoviesDetialActivity extends AppCompatActivity implements View.OnCl
         if (id == R.id.favorite)
         {
             mLog.d("Favorite Clicked");
-            Toast.makeText(this,"Added to Favorite",Toast.LENGTH_SHORT).show();
+            Toast.makeText(MyApplication.context,"Added to Favorite",Toast.LENGTH_SHORT).show();
             new Thread(new Runnable()
             {
                 @Override
@@ -342,127 +347,127 @@ public class MoviesDetialActivity extends AppCompatActivity implements View.OnCl
                     mLog.d("NEW Thread Running");
                     mLog.d("Loading from  "+movieDetails.getPosterPath());
                     Picasso.with(MyApplication.context).load(Constants.POSTER_BASE+movieDetails.getPosterPath()).into(new Target()
-            {
-                @Override
-                public void onBitmapLoaded(final Bitmap bitmap, Picasso.LoadedFrom from)
-                {
-                    mLog.d("Image Loaded");
-                     try
                     {
-                        File file = null;
-
-                        // judge "imgs/.nomedia"'s existance to judge whether path available
-                        file = new File(Environment.getExternalStorageDirectory().getPath() + "/" + movieDetails.getId() + "poster" + ".jpg");
-                        if (file.exists())
+                        @Override
+                        public void onBitmapLoaded(final Bitmap bitmap, Picasso.LoadedFrom from)
                         {
-                            mLog.d(file.getPath()+" File Exists ");
-
-                        }
-                        else
-                        {
+                            mLog.d("Image Loaded");
                             try
                             {
-                                mLog.d("Writing to File");
-                                file.createNewFile();
-                                mLog.d(file.getPath());
+                                File file = null;
+
+                                // judge "imgs/.nomedia"'s existance to judge whether path available
+                                file = new File(Environment.getExternalStorageDirectory().getPath() + "/" + movieDetails.getId() + "poster" + ".jpg");
+                                if (file.exists())
+                                {
+                                    mLog.d(file.getPath()+" File Exists ");
+
+                                }
+                                else
+                                {
+                                    try
+                                    {
+                                        mLog.d("Writing to File");
+                                        file.createNewFile();
+                                        mLog.d(file.getPath());
 
 
-                                FileOutputStream ostream = new FileOutputStream(file);
-                                bitmap.compress(Bitmap.CompressFormat.JPEG, 75, ostream);
-                                ostream.close();
+                                        FileOutputStream ostream = new FileOutputStream(file);
+                                        bitmap.compress(Bitmap.CompressFormat.JPEG, 75, ostream);
+                                        ostream.close();
+
+                                    } catch (Exception e)
+                                    {
+                                        e.printStackTrace();
+                                    }
+
+                                }
+                                movieDetails.setPosterPath(file.getPath());
+                                i++;
+                                mLog.d("CALLIng: "+Constants.BACKDROP_BASE+movieDetails.getBackdropPath());
+                                Picasso.with(MyApplication.context).load(Constants.BACKDROP_BASE+movieDetails.getBackdropPath()).into(new Target()
+                                {
+                                    @Override
+                                    public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from)
+                                    {
+                                        try
+                                        {
+                                            File file = null;
+
+                                            // judge "imgs/.nomedia"'s existance to judge whether path available
+                                            file = new File(Environment.getExternalStorageDirectory().getPath() + "/" + movieDetails.getId() + "back_drop" + ".jpg");
+                                            if (file.exists())
+                                            {
+                                                mLog.d(file.getPath() +" Exists");
+                                                movieDetails.setBackdropPath(file.getPath());
+
+                                            }
+                                            else
+                                            {
+                                                try
+                                                {
+                                                    file.createNewFile();
+                                                    mLog.d(file.getPath());
+                                                    FileOutputStream ostream = new FileOutputStream(file);
+                                                    bitmap.compress(Bitmap.CompressFormat.JPEG, 75, ostream);
+                                                    ostream.close();
+
+                                                } catch (Exception e)
+                                                {
+                                                    e.printStackTrace();
+                                                }
+
+                                            }
+                                            movieDetails.setBackdropPath(file.getPath());
+                                            i++;
+
+                                            SharedPreferences mPreferences = MyApplication.context.getSharedPreferences(Constants.OFFLINE_PREF_KEY, MyApplication.context.MODE_PRIVATE);
+                                            Gson gson = new Gson();
+                                            String movieDetailsString = gson.toJson(movieDetails).toString();
+                                            mLog.d("Saving: " + movieDetailsString);
+                                            mPreferences.edit().putString(movieDetails.getId().toString(), movieDetailsString).apply();
+
+                                            item.setIcon(getResources().getDrawable(android.R.drawable.btn_star_big_on));
+                                        } catch (Exception e)
+                                        {
+                                            e.printStackTrace();
+                                        }
+                                    }
+
+
+                                    @Override
+                                    public void onBitmapFailed(Drawable errorDrawable)
+                                    {
+                                        mLog.d("Failed ");
+                                    }
+
+
+                                    @Override
+                                    public void onPrepareLoad(Drawable placeHolderDrawable)
+                                    {
+                                        mLog.d("Prepping ");
+                                    }
+                                });
 
                             } catch (Exception e)
                             {
                                 e.printStackTrace();
                             }
 
+
                         }
-                            movieDetails.setPosterPath(file.getPath());
-                            i++;
-                            mLog.d("CALLIng: "+Constants.BACKDROP_BASE+movieDetails.getBackdropPath());
-                            Picasso.with(MyApplication.context).load(Constants.BACKDROP_BASE+movieDetails.getBackdropPath()).into(new Target()
-                            {
-                                @Override
-                                public void onBitmapLoaded(Bitmap bitmap, Picasso.LoadedFrom from)
-                                {
-                                    try
-                                    {
-                                        File file = null;
 
-                                        // judge "imgs/.nomedia"'s existance to judge whether path available
-                                        file = new File(Environment.getExternalStorageDirectory().getPath() + "/" + movieDetails.getId() + "back_drop" + ".jpg");
-                                        if (file.exists())
-                                        {
-                                            mLog.d(file.getPath() +" Exists");
-                                            movieDetails.setBackdropPath(file.getPath());
-
-                                        }
-                                        else
-                                        {
-                                            try
-                                            {
-                                                file.createNewFile();
-                                                mLog.d(file.getPath());
-                                                FileOutputStream ostream = new FileOutputStream(file);
-                                                bitmap.compress(Bitmap.CompressFormat.JPEG, 75, ostream);
-                                                ostream.close();
-
-                                            } catch (Exception e)
-                                            {
-                                                e.printStackTrace();
-                                            }
-
-                                        }
-                                        movieDetails.setBackdropPath(file.getPath());
-                                        i++;
-
-                                        SharedPreferences mPreferences = getSharedPreferences(Constants.OFFLINE_PREF_KEY, MODE_PRIVATE);
-                                        Gson gson = new Gson();
-                                        String movieDetailsString = gson.toJson(movieDetails).toString();
-                                        mLog.d("Saving: " + movieDetailsString);
-                                        mPreferences.edit().putString(movieDetails.getId().toString(), movieDetailsString).apply();
-
-                                        item.setIcon(getResources().getDrawable(android.R.drawable.btn_star_big_on));
-                                    } catch (Exception e)
-                                    {
-                                        e.printStackTrace();
-                                    }
-                                }
-
-
-                                @Override
-                                public void onBitmapFailed(Drawable errorDrawable)
-                                {
-                                    mLog.d("Failed ");
-                                }
-
-
-                                @Override
-                                public void onPrepareLoad(Drawable placeHolderDrawable)
-                                {
-                                    mLog.d("Prepping ");
-                                }
-                            });
-
-                    } catch (Exception e)
-                    {
-                        e.printStackTrace();
-                    }
-
-
-                }
-
-                @Override
-                public void onBitmapFailed(Drawable errorDrawable)
-                {
-                    mLog.d("Failed ");
-                }
-                @Override
-                public void onPrepareLoad(Drawable placeHolderDrawable)
-                {
-                    mLog.d("Prepping ");
-                }
-            });
+                        @Override
+                        public void onBitmapFailed(Drawable errorDrawable)
+                        {
+                            mLog.d("Failed ");
+                        }
+                        @Override
+                        public void onPrepareLoad(Drawable placeHolderDrawable)
+                        {
+                            mLog.d("Prepping ");
+                        }
+                    });
 
                 }
             }).run();

@@ -2,4 +2,6 @@
     <string name="app_name">TrendyMovies</string>
     <string name="action_settings">Settings</string>
     <string name="loading">loading...</string>
+    <string name="title_mymovie_list">MyMovies</string>
+    <string name="title_mymovie_detail">MyMovie Detail</string>
 </resources>
